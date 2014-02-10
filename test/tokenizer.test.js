@@ -6,7 +6,7 @@ var tokenizer = require('../lib/tokenizer');
 test('id token', function (t) {
     t.plan(1);
     var s = tokenizer();
-    s.write('foobar');
+    s.push('foobar');
     s.end();
     t.same(s.read(), {type: tokenizer.Type.ID, value: 'foobar'});
 });
@@ -14,7 +14,7 @@ test('id token', function (t) {
 test('quoted token', function (t) {
     t.plan(1);
     var s = tokenizer();
-    s.write('`foobar\'');
+    s.push('`foobar\'');
     s.end();
     t.same(s.read(), {type: tokenizer.Type.STRING, value: 'foobar'});
 });
@@ -22,7 +22,7 @@ test('quoted token', function (t) {
 test('string token', function (t) {
     t.plan(2);
     var s = tokenizer();
-    s.write('汉语');
+    s.push('汉语');
     s.end();
     t.same(s.read(), {type: tokenizer.Type.LITERAL, value: '汉'});
     t.same(s.read(), {type: tokenizer.Type.LITERAL, value: '语'});
