@@ -1,0 +1,42 @@
+{
+  "version": "0.1.0",
+  "name": "m4",
+  "description": "M4 templating language in pure Javascript",
+  "keywords": [
+    "template",
+    "templating",
+    "m4",
+    "string"
+  ],
+  "homepage": "https://github.com/jeanlauliac/node-m4",
+  "author": "Jean Lauliac <jean@lauliac.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeanlauliac/node-m4"
+  },
+  "bugs": "https://github.com/jeanlauliac/node-m4",
+  "directories": {
+    "doc": "./doc",
+    "man": "./man",
+    "lib": "./lib",
+    "bin": "./bin"
+  },
+  "main": "./lib",
+  "dependencies": {
+    "slide": "~1.1.5",
+    "through": "~2.3.4",
+    "tape": "~2.4.2",
+    "faucet": "0.0.0"
+  },
+  "devDependencies": {
+    "npmlog": "0.0.6"
+  },
+  "engines": {
+    "node": ">=0.10",
+    "npm": "1"
+  },
+  "scripts": {
+    "test": "faucet"
+  },
+  "license": "MIT Expat"
+}
