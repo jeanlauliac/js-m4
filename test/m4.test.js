@@ -42,9 +42,3 @@ test('post-expansion tokenization', function (t) {
     s.end();
     t.equal(s.read(), '\n\nwin\n');
 });
-
-test('expand', function (t) {
-    t.plan(1);
-    var s = m4.expand('foo$1bar$2glo$37fiz', 'ba', 'be', 'bi');
-    t.equal(s, 'foobabarbeglofiz');
-});
