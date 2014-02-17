@@ -26,6 +26,11 @@
     "bin": "./bin"
   },
   "main": "./m4",
+  "files": [
+    "lib/",
+    "bin/",
+    "LICENSE"
+  ],
   "dependencies": {
     "slide": "~1.1.5",
     "npmlog": "0.0.6"
