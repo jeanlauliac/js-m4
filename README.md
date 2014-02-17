@@ -1,5 +1,7 @@
 # m4
 
+*Work in progress!*
+
 **m4** is a pure Javascript implementation of an
 [m4](http://mbreen.com/m4.html) templating language interpreter. You can use it
 with Node.js or in the browser, via browserify. A command-line version is
