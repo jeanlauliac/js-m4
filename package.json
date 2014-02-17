@@ -1,7 +1,7 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2",
   "name": "m4",
-  "description": "M4 macro language in pure Javascript",
+  "description": "M4 macro processor in pure Javascript",
   "keywords": [
     "template",
     "templating",
@@ -28,12 +28,11 @@
   "main": "./lib",
   "dependencies": {
     "slide": "~1.1.5",
-    "through": "~2.3.4",
-    "tape": "~2.4.2",
-    "faucet": "0.0.0"
+    "npmlog": "0.0.6"
   },
   "devDependencies": {
-    "npmlog": "0.0.6"
+    "tape": "~2.4.2",
+    "faucet": "0.0.0"
   },
   "engines": {
     "node": ">=0.10",
