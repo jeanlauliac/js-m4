@@ -1,12 +1,16 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "m4",
-  "description": "M4 templating language in pure Javascript",
+  "description": "M4 macro language in pure Javascript",
   "keywords": [
     "template",
     "templating",
     "m4",
-    "string"
+    "string",
+    "processor",
+    "preprocessor",
+    "macro",
+    "language"
   ],
   "homepage": "https://github.com/jeanlauliac/node-m4",
   "author": "Jean Lauliac <jean@lauliac.com>",

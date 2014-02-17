@@ -3,9 +3,10 @@
 *Work in progress!*
 
 **m4** is a pure Javascript implementation of an
-[m4](http://mbreen.com/m4.html) templating language interpreter. You can use it
+[m4](http://mbreen.com/m4.html) macro language processor. You can use it
 with Node.js or in the browser, via browserify. A command-line version is
-provided, usable as a drop-in replacement for a native version.
+provided, usable as a drop-in replacement for a native version
+(such as [GNU M4](http://www.gnu.org/software/m4/)).
 
 ## Installation
 
