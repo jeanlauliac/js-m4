@@ -8,7 +8,7 @@ test('id token', function (t) {
     var s = tokenizer();
     s.push('foobar');
     s.end();
-    t.same(s.read(), {type: tokenizer.Type.ID, value: 'foobar'});
+    t.same(s.read(), {type: tokenizer.Type.NAME, value: 'foobar'});
 });
 
 test('quoted token', function (t) {
@@ -26,4 +26,14 @@ test('string token', function (t) {
     s.end();
     t.same(s.read(), {type: tokenizer.Type.LITERAL, value: '汉'});
     t.same(s.read(), {type: tokenizer.Type.LITERAL, value: '语'});
+});
+
+test('end token', function (t) {
+    t.plan(2);
+    var s = tokenizer();
+    s.push('a');
+    s.end();
+    s.read();
+    t.same(s.read(), {type: tokenizer.Type.END, value: ''});
+    t.equal(s.read(), null);
 });
