@@ -4,12 +4,26 @@ var Transform = require('stream').Transform;
 var util = require('util');
 var tokenizer = require('./lib/tokenizer');
 var expand = require('./lib/expand');
+var util = require('util');
 
 module.exports = function (opts) {
     return new M4(opts);
 };
 
 util.inherits(M4, Transform);
+
+var ErrDescs = {
+    EINVRET: 'macro function \'%s\' did not return a string'
+};
+
+function error() {
+    var args = Array.prototype.slice.call(arguments);
+    var code = args.shift();
+    var err = new Error(util.format.apply(null, [ErrDescs[code]].concat(args)));
+    err.code = code;
+    err.args = args;
+    return err;
+}
 
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
@@ -26,66 +40,86 @@ function M4(opts) {
 
 M4.prototype._transform = function (chunk, encoding, cb) {
     this._tokenizer.push(chunk);
-    while (this._transformNext()) {}
+    this._processPendingMacro();
+    var token = this._tokenizer.read();
+    while (token !== null) {
+        //console.error('TOKEN! [%s] "%s"', token.type, token.value);
+        this._processToken(token);
+        this._processPendingMacro();
+        token = this._tokenizer.read();
+    }
     return cb();
 };
 
 M4.prototype._flush = function (cb) {
     this._tokenizer.end();
-    while (this._transformNext()) {}
-    return cb();
+    this._transform('', null, cb);
 };
 
-M4.prototype._transformNext = function () {
-    var result;
-    if (this._pending !== null) {
-        if (this._tokenizer.peekChar() === '(') {
-            this._tokenizer.read();
-            this._macroStack.push({macro: this._pending, args: ['']});
-            this._pending = null;
-        } else if (this._tokenizer.peekChar() === null) {
-            return false;
-        } else {
-            result = this._pending();
-            this._tokenizer.unshift(result);
-        }
+M4.prototype._startMacroArgs = function () {
+    this._tokenizer.read();
+    this._pending.args.push('');
+    this._macroStack.push(this._pending);
+    this._pending = null;
+};
+
+M4.prototype._callMacro = function (fn, args) {
+    var result = fn.apply(null, args);
+    if (typeof result !== 'string') {
+        this.emit('error', error('EINVRET', args[0]));
+        return '';
     }
-    var token = this._tokenizer.read();
-    if (typeof token === 'undefined') return false;
+    return result;
+};
+
+M4.prototype._processPendingMacro = function () {
+    if (this._pending === null) return;
+    if (this._tokenizer.peekChar() === null) return;
+    if (this._tokenizer.peekChar() === '(')
+        return this._startMacroArgs();
+    var result = this._callMacro(this._pending.fn, this._pending.args);
+    this._tokenizer.unshift(result);
+};
+
+M4.prototype._processToken = function (token) {
     if (token.type === tokenizer.Type.NAME &&
         this._macros.hasOwnProperty(token.value)) {
-        this._pending = this._macros[token.value];
-        return true;
+        this._pending = {fn: this._macros[token.value], args: [token.value]};
+        return;
     }
-    if (this._macroStack.length > 0) {
-        var top = this._macroStack[this._macroStack.length - 1];
-        if (token.type === tokenizer.Type.LITERAL) {
-            if (token.value === ',') {
-                top.args.push('');
-                return true;
-            } else if (token.value === ')') {
-                top = this._macroStack.pop();
-                result = top.macro.apply(null, top.args);
-                this._tokenizer.unshift(result);
-                return true;
-            }
-        }
-        top.args[top.args.length - 1] += token.value;
-        return true;
+    if (this._macroStack.length === 0) {
+        this.push(token.value);
+        return;
     }
-    this.push(token.value);
-    return true;
+    var macro = this._macroStack[this._macroStack.length - 1];
+    if (token.type !== tokenizer.Type.LITERAL) {
+        macro.args[macro.args.length - 1] += token.value;
+        return;
+    }
+    if (token.value === ',') {
+        macro.args.push('');
+    } else if (token.value === ')') {
+        macro = this._macroStack.pop();
+        var result = this._callMacro(macro.fn, macro.args);
+        this._tokenizer.unshift(result);
+    }
 };
 
-M4.prototype.define = function (name, fn) {
+M4.prototype.define = function (self, name, fn) {
+    if (typeof name === 'undefined')
+        return self;
+    if (typeof fn === 'undefined')
+        fn = '';
     if (typeof fn !== 'function')
         fn = expand.bind(null, fn);
     this._macros[name] = fn;
+    return '';
 };
 
-M4.prototype.divert = function (name, bufIx) {
+M4.prototype.divert = function (self, name, bufIx) {
     if (bufIx === null || typeof bufIx === 'undefined') bufIx = 0;
     this._curBufIx = bufIx;
+    return '';
 };
 
 M4.prototype.dnl = function (name) {

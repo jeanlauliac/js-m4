@@ -11,6 +11,18 @@ test('id token', function (t) {
     t.same(s.read(), {type: tokenizer.Type.NAME, value: 'foobar'});
 });
 
+test('id token, multiple', function (t) {
+    t.plan(5);
+    var s = tokenizer();
+    s.push('foobar glo');
+    s.end();
+    t.same(s.read(), {type: tokenizer.Type.NAME, value: 'foobar'});
+    t.same(s.read(), {type: tokenizer.Type.LITERAL, value: ' '});
+    t.same(s.read(), {type: tokenizer.Type.NAME, value: 'glo'});
+    t.same(s.read(), {type: tokenizer.Type.END, value: ''});
+    t.equal(s.read(), null);
+});
+
 test('quoted token', function (t) {
     t.plan(1);
     var s = tokenizer();
