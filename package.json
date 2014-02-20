@@ -12,13 +12,13 @@
     "macro",
     "language"
   ],
-  "homepage": "https://github.com/jeanlauliac/node-m4",
+  "homepage": "https://github.com/jeanlauliac/js-m4",
   "author": "Jean Lauliac <jean@lauliac.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jeanlauliac/node-m4"
+    "url": "https://github.com/jeanlauliac/js-m4"
   },
-  "bugs": "https://github.com/jeanlauliac/node-m4",
+  "bugs": "https://github.com/jeanlauliac/js-m4/issues",
   "directories": {
     "doc": "./doc",
     "man": "./man",
