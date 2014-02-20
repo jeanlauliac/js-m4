@@ -1,7 +1,11 @@
 'use strict';
 
-var test = require('tape');
+var testRaw = require('tape');
 var tokenizer = require('../lib/tokenizer');
+
+var test = function (name, fn) {
+    testRaw('[tokenizer] ' + name, fn);
+};
 
 test('id token', function (t) {
     t.plan(1);

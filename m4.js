@@ -33,9 +33,9 @@ function M4(opts) {
     this._buffers = [];
     this._curBufIx = 0;
     this._tokenizer = tokenizer();
-    this.define('define', this.define.bind(this));
-    this.define('divert', this.divert.bind(this));
-    this.define('dnl', this.dnl.bind(this));
+    this.define(null, 'define', this.define.bind(this));
+    this.define(null, 'divert', this.divert.bind(this));
+    this.define(null, 'dnl', this.dnl.bind(this));
 }
 
 M4.prototype._transform = function (chunk, encoding, cb) {
@@ -43,7 +43,6 @@ M4.prototype._transform = function (chunk, encoding, cb) {
     this._processPendingMacro();
     var token = this._tokenizer.read();
     while (token !== null) {
-        //console.error('TOKEN! [%s] "%s"', token.type, token.value);
         this._processToken(token);
         this._processPendingMacro();
         token = this._tokenizer.read();
@@ -74,11 +73,13 @@ M4.prototype._callMacro = function (fn, args) {
 
 M4.prototype._processPendingMacro = function () {
     if (this._pending === null) return;
-    if (this._tokenizer.peekChar() === null) return;
+    if (this._tokenizer.peekChar() === null &&
+        !this._tokenizer.isEnd()) return;
     if (this._tokenizer.peekChar() === '(')
         return this._startMacroArgs();
     var result = this._callMacro(this._pending.fn, this._pending.args);
     this._tokenizer.unshift(result);
+    this._pending = null;
 };
 
 M4.prototype._processToken = function (token) {
@@ -92,24 +93,23 @@ M4.prototype._processToken = function (token) {
         return;
     }
     var macro = this._macroStack[this._macroStack.length - 1];
-    if (token.type !== tokenizer.Type.LITERAL) {
-        macro.args[macro.args.length - 1] += token.value;
-        return;
+    if (token.type === tokenizer.Type.LITERAL) {
+        if (token.value === ',') {
+            macro.args.push('');
+            return;
+        } else if (token.value === ')') {
+            macro = this._macroStack.pop();
+            var result = this._callMacro(macro.fn, macro.args);
+            this._tokenizer.unshift(result);
+            return;
+        }
     }
-    if (token.value === ',') {
-        macro.args.push('');
-    } else if (token.value === ')') {
-        macro = this._macroStack.pop();
-        var result = this._callMacro(macro.fn, macro.args);
-        this._tokenizer.unshift(result);
-    }
+    macro.args[macro.args.length - 1] += token.value;
 };
 
 M4.prototype.define = function (self, name, fn) {
-    if (typeof name === 'undefined')
-        return self;
-    if (typeof fn === 'undefined')
-        fn = '';
+    if (typeof name === 'undefined') return '`' + self + '\'';
+    if (typeof fn === 'undefined') fn = '';
     if (typeof fn !== 'function')
         fn = expand.bind(null, fn);
     this._macros[name] = fn;

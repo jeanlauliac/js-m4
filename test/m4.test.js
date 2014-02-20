@@ -26,15 +26,16 @@ function streamEqual(t, lhs, rhs, cb) {
 }
 
 var smPath = path.join(__dirname, 'samples');
-var opt = {encoding: 'utf8'};
+var opt = {encoding: 'utf8', autoClose: true};
 
 fs.readdir(smPath, function (err, files) {
     if (err) throw err;
     files.forEach(function (file) {
         if (path.extname(file) === '.m4') return;
-        test(file, function (t) {
-            var input = fs.createReadStream(path.join(smPath, file), opt);
-            var ref = fs.createReadStream(path.join(smPath, file + '.m4'), opt);
+        test('[m4] ' + file, function (t) {
+            file = path.join(smPath, file);
+            var input = fs.createReadStream(file + '.m4', opt);
+            var ref = fs.createReadStream(file, opt);
             var output = input.pipe(m4());
             streamEqual(t, output, ref, function () {
                 t.end();
@@ -42,46 +43,3 @@ fs.readdir(smPath, function (err, files) {
         });
     });
 });
-
-/*
-test('passthrough', function (t) {
-    t.plan(1);
-    var s = m4();
-    s.write('the cake is a lie');
-    s.end();
-    t.equal(s.read(), 'the cake is a lie');
-});
-
-test('no-param builtins', function (t) {
-    t.plan(1);
-    var s = m4();
-    s.write('define');
-    s.end();
-    t.equal(s.read(), 'define');
-});
-
-test('define', function (t) {
-    t.plan(1);
-    var s = m4();
-    s.write('define(foo,bar) foo');
-    t.equal(s.read(), ' bar');
-});
-
-test('quotes', function (t) {
-    t.plan(2);
-    var s = m4();
-    s.write('foo`\'bar');
-    t.equal(s.read(), 'foobar');
-    s.write('`foobar\'');
-    t.equal(s.read(), 'foobar');
-});
-
-test('post-expansion tokenization', function (t) {
-    t.plan(1);
-    var s = m4();
-    s.write('define(foo,bar)\ndefine(barglo,win)\n');
-    s.write('foo()glo');
-    s.end();
-    t.equal(s.read(), '\n\nwin\n');
-});
-*/
