@@ -25,6 +25,16 @@ function error() {
     return err;
 }
 
+function makeMacro(fn, inert) {
+    if (typeof inert === 'undefined') inert = false;
+    return function macro() {
+        var args = Array.prototype.slice.call(arguments);
+        var self = args.shift();
+        if (inert && args.length === 0) return '`' + self + '\'';
+        return fn.apply(null, args);
+    };
+}
+
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
     this._macros = {};
@@ -33,9 +43,9 @@ function M4(opts) {
     this._buffers = [];
     this._curBufIx = 0;
     this._tokenizer = tokenizer();
-    this.define(null, 'define', this.define.bind(this));
-    this.define(null, 'divert', this.divert.bind(this));
-    this.define(null, 'dnl', this.dnl.bind(this));
+    this.define('define', makeMacro(this.define.bind(this), true));
+    this.define('divert', makeMacro(this.divert.bind(this)));
+    this.define('dnl', makeMacro(this.dnl.bind(this)));
 }
 
 M4.prototype._transform = function (chunk, encoding, cb) {
@@ -107,8 +117,8 @@ M4.prototype._processToken = function (token) {
     macro.args[macro.args.length - 1] += token.value;
 };
 
-M4.prototype.define = function (self, name, fn) {
-    if (typeof name === 'undefined') return '`' + self + '\'';
+M4.prototype.define = function (name, fn) {
+    if (typeof name !== 'string' || name.length === 0) return '';
     if (typeof fn === 'undefined') fn = '';
     if (typeof fn !== 'function')
         fn = expand.bind(null, fn);
@@ -116,12 +126,12 @@ M4.prototype.define = function (self, name, fn) {
     return '';
 };
 
-M4.prototype.divert = function (self, name, bufIx) {
+M4.prototype.divert = function (bufIx) {
     if (bufIx === null || typeof bufIx === 'undefined') bufIx = 0;
     this._curBufIx = bufIx;
     return '';
 };
 
-M4.prototype.dnl = function (name) {
+M4.prototype.dnl = function () {
 
 };
