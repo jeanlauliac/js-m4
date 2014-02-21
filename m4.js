@@ -42,7 +42,8 @@ function M4(opts) {
     this._pending = null;
     this._macroStack = [];
     this._buffers = [];
-    this._curBufIx = 0;
+    this._divertIx = 0;
+    this._diversions = [];
     this._tokenizer = new Tokenizer();
     this._err = null;
     this.define('define', makeMacro(this.define.bind(this), true));
@@ -70,7 +71,14 @@ M4.prototype._transform = function (chunk, encoding, cb) {
 
 M4.prototype._flush = function (cb) {
     this._tokenizer.end();
-    this._transform('', null, cb);
+    this._transform('', null, (function (err) {
+        if (err) return cb(err);
+        for (var i = 0; i < this._diversions.length; ++i) {
+            if (typeof this._diversions[i] === 'undefined') continue;
+            this.push(this._diversions[i]);
+        }
+        return cb();
+    }).bind(this));
 };
 
 M4.prototype._startMacroArgs = function () {
@@ -108,10 +116,8 @@ M4.prototype._processToken = function (token) {
         this._pending = {fn: this._macros[token.value], args: [token.value]};
         return;
     }
-    if (this._macroStack.length === 0) {
-        this.push(token.value);
-        return;
-    }
+    if (this._macroStack.length === 0)
+        return this._pushOutput(token.value);
     var macro = this._macroStack[this._macroStack.length - 1];
     if (token.type === Tokenizer.Type.LITERAL) {
         if (token.value === ',') {
@@ -127,6 +133,13 @@ M4.prototype._processToken = function (token) {
     macro.args[macro.args.length - 1] += token.value;
 };
 
+M4.prototype._pushOutput = function (output) {
+    if (this._divertIx < 0) return;
+    if (this._divertIx === 0)
+        return this.push(output);
+    this._diversions[this._divertIx - 1] += output;
+};
+
 M4.prototype.define = function (name, fn) {
     if (typeof name !== 'string' || name.length === 0) return '';
     if (typeof fn === 'undefined') fn = '';
@@ -136,10 +149,16 @@ M4.prototype.define = function (name, fn) {
     return '';
 };
 
-M4.prototype.divert = function (bufIx) {
-    if (bufIx === null || typeof bufIx === 'undefined') bufIx = 0;
-    this._curBufIx = bufIx;
+M4.prototype.divert = function (ix) {
+    if (ix === null || typeof ix === 'undefined') ix = 0;
+    this._divertIx = ix;
+    if (typeof this._diversions[this._divertIx - 1] === 'undefined') {
+        this._diversions[this._divertIx - 1] = '';
+    }
     return '';
+};
+
+M4.prototype.undivert = function (ix) {
 };
 
 M4.prototype.dnl = function () {
