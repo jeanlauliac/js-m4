@@ -2,14 +2,11 @@
 
 var Transform = require('stream').Transform;
 var util = require('util');
-var tokenizer = require('./lib/tokenizer');
+var Tokenizer = require('./lib/tokenizer');
 var expand = require('./lib/expand');
 var util = require('util');
 
-module.exports = function (opts) {
-    return new M4(opts);
-};
-
+module.exports = M4;
 util.inherits(M4, Transform);
 
 var ErrDescs = {
@@ -46,7 +43,7 @@ function M4(opts) {
     this._macroStack = [];
     this._buffers = [];
     this._curBufIx = 0;
-    this._tokenizer = tokenizer();
+    this._tokenizer = new Tokenizer();
     this._err = null;
     this.define('define', makeMacro(this.define.bind(this), true));
     this.define('divert', makeMacro(this.divert.bind(this)));
@@ -106,7 +103,7 @@ M4.prototype._processPendingMacro = function () {
 };
 
 M4.prototype._processToken = function (token) {
-    if (token.type === tokenizer.Type.NAME &&
+    if (token.type === Tokenizer.Type.NAME &&
         this._macros.hasOwnProperty(token.value)) {
         this._pending = {fn: this._macros[token.value], args: [token.value]};
         return;
@@ -116,7 +113,7 @@ M4.prototype._processToken = function (token) {
         return;
     }
     var macro = this._macroStack[this._macroStack.length - 1];
-    if (token.type === tokenizer.Type.LITERAL) {
+    if (token.type === Tokenizer.Type.LITERAL) {
         if (token.value === ',') {
             macro.args.push('');
             return;

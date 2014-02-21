@@ -1,7 +1,7 @@
 'use strict';
 
 var test = require('tape');
-var m4 = require('..');
+var M4 = require('..');
 var fs = require('fs');
 var path = require('path');
 
@@ -36,7 +36,7 @@ fs.readdir(smPath, function (err, files) {
             file = path.join(smPath, file);
             var input = fs.createReadStream(file + '.m4', opt);
             var ref = fs.createReadStream(file, opt);
-            var output = input.pipe(m4());
+            var output = input.pipe(new M4());
             streamEqual(t, output, ref, function () {
                 t.end();
             });
@@ -46,7 +46,7 @@ fs.readdir(smPath, function (err, files) {
 
 test('[m4] nesting limit', function (t) {
     t.plan(1);
-    var output = m4({nestingLimit: 2});
+    var output = new M4({nestingLimit: 2});
     output.on('error', function (err) {
         t.equal(err.code, 'ENESTLIMIT');
     });
