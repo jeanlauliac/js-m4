@@ -45,6 +45,16 @@ As such this is a duplex stream you can pipe, write and read.
     * `nestingLimit` *Number* Maximum nested macro calls. Beware, this
       does not prevent [endless rescanning loops](http://www.gnu.org/software/m4/manual/m4.html#index-nesting-limit).
 
+#### Event: 'error'
+
+Signal a non-recuperable error. The stream will not produce further output in
+the case of an error.
+
+#### Event: 'warning'
+
+Signal a warning. The steam continues to produce output normally, but there
+may be some unwanted behavior.
+
 #### m4.define(name, {fn|str})
 
   * `name` *String* Identifier.
@@ -54,19 +64,20 @@ As such this is a duplex stream you can pipe, write and read.
 
 Define a M4 macro as a Javascript function.
 
-#### m4.divert(bufferIx)
+#### m4.divert([index=0])
 
-  * `bufferIx` *Number* Buffer index.
+  * `index` *Number* Diversion index.
 
 Change how the output is processed. If the index is zero, output is directly
 emitted by the stream. If the index is a positive integer, the output is
-stored in an internal buffer instead.
+stored in an internal buffer — a "diversion" — instead.
 
-#### m4.undivert(bufferIx)
+#### m4.undivert([diversions...])
 
-   * `bufferIx` *Number* Buffer index.
+   * `diversions` *Number* Diversion indices.
 
-Output the content of the specified buffer. The buffer is emptied.
+Output the content of the specified diversions. They are emptied. If no
+diversion is specified, all of them are undiverted, in numerical order.
 
 #### m4.dnl()
 

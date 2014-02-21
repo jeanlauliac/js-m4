@@ -11,7 +11,8 @@ util.inherits(M4, Transform);
 
 var ErrDescs = {
     EINVRET: 'macro function \'%s\' did not return a string',
-    ENESTLIMIT: 'too much macro nesting (max. %s)'
+    ENESTLIMIT: 'too much macro nesting (max. %s)',
+    WTXTUNDIV: 'non-number \'%s\' in undivert arguments (forgot to enable extensions?)'
 };
 
 function error() {
@@ -38,6 +39,7 @@ function M4(opts) {
     this._opts = {};
     for (var opt in opts) this._opts[opt] = opts[opt];
     this._opts.nestingLimit = this._opts.nestingLimit || 0;
+    this._opts.extensions = this._opts.extensions || false;
     this._macros = {};
     this._pending = null;
     this._macroStack = [];
@@ -48,6 +50,7 @@ function M4(opts) {
     this._err = null;
     this.define('define', makeMacro(this.define.bind(this), true));
     this.define('divert', makeMacro(this.divert.bind(this)));
+    this.define('undivert', makeMacro(this.undivert.bind(this)));
     this.define('dnl', makeMacro(this.dnl.bind(this)));
 }
 
@@ -73,10 +76,8 @@ M4.prototype._flush = function (cb) {
     this._tokenizer.end();
     this._transform('', null, (function (err) {
         if (err) return cb(err);
-        for (var i = 0; i < this._diversions.length; ++i) {
-            if (typeof this._diversions[i] === 'undefined') continue;
-            this.push(this._diversions[i]);
-        }
+        this.divert();
+        this._undivertAll();
         return cb();
     }).bind(this));
 };
@@ -151,14 +152,47 @@ M4.prototype.define = function (name, fn) {
 
 M4.prototype.divert = function (ix) {
     if (ix === null || typeof ix === 'undefined') ix = 0;
-    this._divertIx = ix;
+    this._divertIx = +ix;
     if (typeof this._diversions[this._divertIx - 1] === 'undefined') {
         this._diversions[this._divertIx - 1] = '';
     }
     return '';
 };
 
-M4.prototype.undivert = function (ix) {
+M4.prototype.undivert = function () {
+    var ics = Array.prototype.slice.call(arguments);
+    if (ics.length === 0) {
+        this._undivertAll();
+        return '';
+    }
+    while (ics.length > 0) {
+        var arg = ics.pop();
+        if (arg === '') continue;
+        var i = +arg;
+        if (i + '' === arg) {
+            this._undivert(+i);
+        } else {
+            if (this._opts.extensions) {
+                throw new Error('not implemented');
+            } else {
+                this.emit('warning', error('WTXTUNDIV', arg));
+            }
+        }
+    }
+    return '';
+};
+
+M4.prototype._undivertAll = function () {
+    for (var i = 1; i <= this._diversions.length; ++i) {
+        this._undivert(i);
+    }
+};
+
+M4.prototype._undivert = function (i) {
+    if (i <= 0 || this._divertIx === i) return;
+    if (typeof this._diversions[i - 1] === 'undefined') return;
+    this._pushOutput(this._diversions[i - 1]);
+    delete this._diversions[i - 1];
 };
 
 M4.prototype.dnl = function () {
