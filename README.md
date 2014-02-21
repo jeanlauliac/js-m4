@@ -23,36 +23,52 @@ boop
 // example.js
 'use strict';
 
-var Readable = require('stream').Readable;
-var m4 = require('m4');
+var M4 = require('m4');
 
-var input = new Readable();
-input._read = function() {
-    this.push('define(`beep', `boop')dnl\nbeep');
-    this.push(null);
-};
+var input = new M4();
+input.pipe(M4()).pipe(process.stdout);
 
-input.pipe(m4()).pipe(process.stdout);
+input.write("define(`beep', `boop')dnl\nbeep\n");
+input.end();
 ```
 
 ## API
 
 ### Class: M4
 
+Inherit [stream.Transform](http://nodejs.org/api/stream.html#stream_class_stream_transform_1).
+As such this is a duplex stream you can pipe, write and read.
+
 #### new M4(opts)
 
-  * `opts` *Object* Can contain.
+  * `opts` *Object* Options:
+    * `nestingLimit` *Number* Maximum nested macro calls. Beware, this
+      does not prevent [endless rescanning loops](http://www.gnu.org/software/m4/manual/m4.html#index-nesting-limit).
 
-#### m4.define(name, fn)
+#### m4.define(name, {fn|str})
 
-  * `name` Identifier.
-  * `fn` Fonction called with `(str)`, must return the result as a string.
+  * `name` *String* Identifier.
+  * `fn` *Fonction* Called with `(name, [arg1, arg2 ... ])`, must return the
+    macro expansion result as a string. `name` is the macro defined name itself.
+  * `str` *String* Macro content, just like you were defining the macro in M4.
 
 Define a M4 macro as a Javascript function.
 
-#### m4.process([cb])
+#### m4.divert(bufferIx)
 
-  * `cb` *Function* Called with arguments `(err, data)` with the result.
+  * `bufferIx` *Number* Buffer index.
 
-Process the input in the current context. Return a readable stream with the
-processed output except if `cb` is specified.
+Change how the output is processed. If the index is zero, output is directly
+emitted by the stream. If the index is a positive integer, the output is
+stored in an internal buffer instead.
+
+#### m4.undivert(bufferIx)
+
+   * `bufferIx` *Number* Buffer index.
+
+Output the content of the specified buffer. The buffer is emptied.
+
+#### m4.dnl()
+
+Put the stream into a special mode where all the tokens are ignored until the
+next newline.

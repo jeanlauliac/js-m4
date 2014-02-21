@@ -143,5 +143,5 @@ M4.prototype.divert = function (bufIx) {
 };
 
 M4.prototype.dnl = function () {
-
+    return '';
 };
