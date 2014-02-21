@@ -13,7 +13,8 @@ module.exports = function (opts) {
 util.inherits(M4, Transform);
 
 var ErrDescs = {
-    EINVRET: 'macro function \'%s\' did not return a string'
+    EINVRET: 'macro function \'%s\' did not return a string',
+    ENESTLIMIT: 'too much macro nesting (max. %s)'
 };
 
 function error() {
@@ -37,25 +38,35 @@ function makeMacro(fn, inert) {
 
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
+    this._opts = {};
+    for (var opt in opts) this._opts[opt] = opts[opt];
+    this._opts.nestingLimit = this._opts.nestingLimit || 0;
     this._macros = {};
     this._pending = null;
     this._macroStack = [];
     this._buffers = [];
     this._curBufIx = 0;
     this._tokenizer = tokenizer();
+    this._err = null;
     this.define('define', makeMacro(this.define.bind(this), true));
     this.define('divert', makeMacro(this.divert.bind(this)));
     this.define('dnl', makeMacro(this.dnl.bind(this)));
 }
 
 M4.prototype._transform = function (chunk, encoding, cb) {
-    this._tokenizer.push(chunk);
-    this._processPendingMacro();
-    var token = this._tokenizer.read();
-    while (token !== null) {
-        this._processToken(token);
+    if (this._err !== null) return cb();
+    try {
+        this._tokenizer.push(chunk);
         this._processPendingMacro();
-        token = this._tokenizer.read();
+        var token = this._tokenizer.read();
+        while (token !== null) {
+            this._processToken(token);
+            this._processPendingMacro();
+            token = this._tokenizer.read();
+        }
+    } catch (err) {
+        this._err = err;
+        return cb(err);
     }
     return cb();
 };
@@ -66,6 +77,10 @@ M4.prototype._flush = function (cb) {
 };
 
 M4.prototype._startMacroArgs = function () {
+    if (this._opts.nestingLimit > 0 &&
+        this._macroStack.length === this._opts.nestingLimit) {
+        throw error('ENESTLIMIT', this._opts.nestingLimit);
+    }
     this._tokenizer.read();
     this._pending.args.push('');
     this._macroStack.push(this._pending);
@@ -74,10 +89,8 @@ M4.prototype._startMacroArgs = function () {
 
 M4.prototype._callMacro = function (fn, args) {
     var result = fn.apply(null, args);
-    if (typeof result !== 'string') {
-        this.emit('error', error('EINVRET', args[0]));
-        return '';
-    }
+    if (typeof result !== 'string')
+        throw error('EINVRET', args[0]);
     return result;
 };
 

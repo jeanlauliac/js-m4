@@ -43,3 +43,13 @@ fs.readdir(smPath, function (err, files) {
         });
     });
 });
+
+test('[m4] nesting limit', function (t) {
+    t.plan(1);
+    var output = m4({nestingLimit: 2});
+    output.on('error', function (err) {
+        t.equal(err.code, 'ENESTLIMIT');
+    });
+    output.write('define(foo, define(bar, define(glo, 0)))');
+    output.end();
+});
