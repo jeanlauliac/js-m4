@@ -10,9 +10,10 @@ module.exports = M4;
 util.inherits(M4, Transform);
 
 var ErrDescs = {
-    EINVRET: 'macro function \'%s\' did not return a string',
+    EINVRET: 'macro function `%s\' did not return a string',
     ENESTLIMIT: 'too much macro nesting (max. %s)',
-    WTXTUNDIV: 'non-number \'%s\' in undivert arguments (forgot to enable extensions?)'
+    WTXTUNDIV: 'non-number `%s\' in undivert arguments (forgot to enable extensions?)',
+    WTOOMANYARGS: 'excess arguments to builtin `%1\' ignored'
 };
 
 function error() {
@@ -51,6 +52,7 @@ function M4(opts) {
     this.define('define', makeMacro(this.define.bind(this), true));
     this.define('divert', makeMacro(this.divert.bind(this)));
     this.define('undivert', makeMacro(this.undivert.bind(this)));
+    this.define('divnum', makeMacro(this.divnum.bind(this)));
     this.define('dnl', makeMacro(this.dnl.bind(this)));
 }
 
@@ -180,6 +182,12 @@ M4.prototype.undivert = function () {
         }
     }
     return '';
+};
+
+M4.prototype.divnum = function (dummy) {
+    if (typeof dummy !== 'undefined')
+        this.emit('warning', error('WTOOMANYARGS', 'divnum'));
+    return this._divertIx + '';
 };
 
 M4.prototype._undivertAll = function () {
