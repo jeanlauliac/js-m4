@@ -5,6 +5,7 @@ var nopt = require('nopt');
 var path = require('path');
 var fs = require('fs');
 var npmlog = require('npmlog');
+var sysexits = require('sysexits');
 
 var knownOpts = {
     'extensions': Boolean,
@@ -14,10 +15,18 @@ var knownOpts = {
 var opts = nopt(knownOpts);
 var files = opts.argv.remain;
 var output = process.stdout;
+var errored = false;
 
 if (typeof opts.output !== 'undefined') {
     output = fs.createWriteStream(opts.output, {encoding: 'utf8'});
 }
+
+if (!process.stdout.isTTY)
+    npmlog.heading = path.basename(process.argv[1]);
+
+output.on('error', function (err) {
+    process.exit(sysexits.IOERR);
+});
 
 process.stdin.setEncoding('utf8');
 
@@ -30,6 +39,7 @@ function end() {
     if (output !== process.stdout) {
         output.end();
     }
+    if (errored) process.exit(1);
 }
 
 function processFiles(files, output, cb) {
@@ -40,14 +50,31 @@ function processFiles(files, output, cb) {
     var input = null;
     if (file === '-') input = process.stdin;
     else input = fs.createReadStream(file, {encoding: 'utf8'});
-    processInput(input, output, function (err) {
-        if (err) return cb(err);
+    var done = false;
+    function proceed() {
+        if (done) return;
+        done = true;
         processFiles(files, output, cb);
+    }
+    input.on('error', function (err) {
+        npmlog.error(null, err.message);
+        errored = true;
+        proceed();
+    });
+    processInput(input, output, function (err) {
+        proceed();
     });
 }
 
 function processInput(input, output, cb) {
     var m4 = new M4();
+    m4.on('error', function (err) {
+        npmlog.error(null, err.message);
+        errored = true;
+    });
+    m4.on('warning', function (err) {
+        npmlog.warn(null, err.message);
+    });
     input.pipe(m4).pipe(output, {end: false});
     m4.on('end', function (err) {
         cb(err);

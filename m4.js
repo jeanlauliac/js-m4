@@ -13,7 +13,7 @@ var ErrDescs = {
     EINVRET: 'macro function `%s\' did not return a string',
     ENESTLIMIT: 'too much macro nesting (max. %s)',
     WTXTUNDIV: 'non-number `%s\' in undivert arguments (forgot to enable extensions?)',
-    WTOOMANYARGS: 'excess arguments to builtin `%1\' ignored'
+    WTOOMANYARGS: 'excess arguments to builtin `%s\' ignored'
 };
 
 function error() {
@@ -69,6 +69,7 @@ M4.prototype._transform = function (chunk, encoding, cb) {
         }
     } catch (err) {
         this._err = err;
+        //this.push(null);
         return cb(err);
     }
     return cb();
