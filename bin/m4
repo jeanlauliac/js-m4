@@ -19,21 +19,28 @@ if (typeof opts.output !== 'undefined') {
     output = fs.createWriteStream(opts.output, {encoding: 'utf8'});
 }
 
-if (files.length === 0) {
-    process.stdin.resume();
-    process.stdin.setEncoding('utf8');
-    processInput(process.stdin, output, function () {});
-} else {
-    processFiles(files, output, function () {});
+process.stdin.setEncoding('utf8');
+
+if (files.length === 0)
+    files.push('-');
+
+processFiles(files, output, end);
+
+function end() {
+    if (output !== process.stdout) {
+        output.end();
+    }
 }
 
 function processFiles(files, output, cb) {
     if (files.length === 0) {
-        output.end();
         return cb();
     }
-    var file = files.pop();
-    processInput(fs.createReadStream(file, {encoding: 'utf8'}), function (err) {
+    var file = files.shift();
+    var input = null;
+    if (file === '-') input = process.stdin;
+    else input = fs.createReadStream(file, {encoding: 'utf8'});
+    processInput(input, output, function (err) {
         if (err) return cb(err);
         processFiles(files, output, cb);
     });
