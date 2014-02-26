@@ -51,6 +51,7 @@ function M4(opts) {
     this._diversions = [];
     this._tokenizer = new Tokenizer();
     this._err = null;
+    this._dnlMode = false;
     this.define('define', makeMacro(this.define.bind(this), true));
     this.define('divert', makeMacro(this.divert.bind(this)));
     this.define('undivert', makeMacro(this.undivert.bind(this)));
@@ -65,7 +66,11 @@ M4.prototype._transform = function (chunk, encoding, cb) {
         this._processPendingMacro();
         var token = this._tokenizer.read();
         while (token !== null) {
-            this._processToken(token);
+            if (this._dnlMode) {
+                if (token.value === '\n') this._dnlMode = false;
+            } else {
+                this._processToken(token);
+            }
             this._processPendingMacro();
             token = this._tokenizer.read();
         }
@@ -204,5 +209,5 @@ M4.prototype._undivert = function (i) {
 };
 
 M4.prototype.dnl = function () {
-    return '';
+    this._dnlMode = true;
 };
