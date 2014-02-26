@@ -31,7 +31,9 @@ function makeMacro(fn, inert) {
         var args = Array.prototype.slice.call(arguments);
         var self = args.shift();
         if (inert && args.length === 0) return '`' + self + '\'';
-        return fn.apply(null, args);
+        var res = fn.apply(null, args);
+        if (typeof res === 'undefined') return '';
+        return res + '';
     };
 }
 
@@ -150,7 +152,6 @@ M4.prototype.define = function (name, fn) {
     if (typeof fn !== 'function')
         fn = expand.bind(null, fn);
     this._macros[name] = fn;
-    return '';
 };
 
 M4.prototype.divert = function (ix) {
@@ -159,14 +160,13 @@ M4.prototype.divert = function (ix) {
     if (typeof this._diversions[this._divertIx - 1] === 'undefined') {
         this._diversions[this._divertIx - 1] = '';
     }
-    return '';
 };
 
 M4.prototype.undivert = function () {
     var ics = Array.prototype.slice.call(arguments);
     if (ics.length === 0) {
         this._undivertAll();
-        return '';
+        return;
     }
     while (ics.length > 0) {
         var arg = ics.pop();
@@ -182,13 +182,12 @@ M4.prototype.undivert = function () {
             }
         }
     }
-    return '';
 };
 
 M4.prototype.divnum = function (dummy) {
     if (typeof dummy !== 'undefined')
         this.emit('warning', error('WTOOMANYARGS', 'divnum'));
-    return this._divertIx + '';
+    return this._divertIx;
 };
 
 M4.prototype._undivertAll = function () {
