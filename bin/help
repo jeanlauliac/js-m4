@@ -1,0 +1,31 @@
+Usage: m4 [OPTION]... [FILE]...
+Process macros in FILEs. If no FILE or `-', stdin is read.
+
+Prefixing some options with `no-' has the inverse effect.
+For example, `--no-extensions'.
+
+General:
+      --help                    display this helpand exit
+  -v, --version                 output version and exit
+  -E, --fatal-warnings          stop execution after first warning
+  -P, --prefix-builtins         prefix all builtins with `m4_'
+  -Q, --quiet, --silent         suppress some warnings for builtins
+
+Preprocessor:
+  -D, --define=NAME[=VALUE]     define NAME has having VALUE, or empty
+  -I, --include=DIRECTORY       append DIRECTORY to include path
+  -s, --synclines               generate `#line NUM "FILE"' lines
+  -U, --undefine=NAME           undefine NAME
+  -m, --source-map=FILE         output a corresponding Source Map V3 into FILE
+  -o, --output=FILE             output results to FILE instead of stdout
+
+Limits:
+      --extensions              enable extensions [default]
+  -L, --nesting-limit=NUMBER    change artificial nesting limit [infinite]
+
+Frozen state:
+  -F, --freeze-state=FILE       produce a frozen state into FILE at end
+  -R, --reload-state=FILE       reload a frozen state form FILE at start
+
+Debugging:
+  -d, --debug[=FLAGS]           set debug level, `aeq' if unspecified

@@ -5,78 +5,142 @@ var nopt = require('nopt');
 var path = require('path');
 var fs = require('fs');
 var npmlog = require('npmlog');
-var sysexits = require('sysexits');
+var Sysexits = require('sysexits');
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 
 var knownOpts = {
+    'help': Boolean,
+    'version': Boolean,
+    'fatal-warnings': Boolean,
+    'prefix-builtins': Boolean,
+    'quiet': Boolean,
+    'define': String,
+    'include': path,
+    'synclines': Boolean,
+    'undefine': String,
+    'source-map': path,
+    'output': path,
     'extensions': Boolean,
-    'output': path
+    'nesting-limit': Number,
+    'freeze-state': path,
+    'reload-state': path,
+    'debug': String
 };
 
-var opts = nopt(knownOpts);
-var files = opts.argv.remain;
-var output = process.stdout;
-var errored = false;
+var shortHands = {
+    'v': 'version',
+    'E': 'fatal-warnings',
+    'P': 'prefix-builtins',
+    'silent': 'quiet',
+    'Q': 'quiet',
+    'D': 'define',
+    'I': 'include',
+    's': 'synclines',
+    'U': 'undefine',
+    'm': 'source-map',
+    'o': 'output',
+    'L': 'nesting-limit',
+    'F': 'freeze-state',
+    'R': 'reload-state',
+    'd': 'debug'
+};
 
-if (typeof opts.output !== 'undefined') {
-    output = fs.createWriteStream(opts.output, {encoding: 'utf8'});
+function main() {
+    var opts = nopt(knownOpts);
+    var files = opts.argv.remain;
+    if (opts.help) return help();
+    if (opts.version) return version();
+    if (!process.stdout.isTTY)
+        npmlog.heading = path.basename(process.argv[1]);
+    run(opts, files);
 }
 
-if (!process.stdout.isTTY)
-    npmlog.heading = path.basename(process.argv[1]);
-
-output.on('error', function (err) {
-    process.exit(sysexits.IOERR);
-});
-
-process.stdin.setEncoding('utf8');
-
-if (files.length === 0)
-    files.push('-');
-
-processFiles(files, output, end);
-
-function end() {
-    if (output !== process.stdout) {
-        output.end();
-    }
-    if (errored) process.exit(1);
-}
-
-function processFiles(files, output, cb) {
-    if (files.length === 0) {
-        return cb();
-    }
-    var file = files.shift();
-    var input = null;
-    if (file === '-') input = process.stdin;
-    else input = fs.createReadStream(file, {encoding: 'utf8'});
-    var done = false;
-    function proceed() {
-        if (done) return;
-        done = true;
-        processFiles(files, output, cb);
-    }
-    input.on('error', function (err) {
-        npmlog.error(null, err.message);
-        errored = true;
-        proceed();
-    });
-    processInput(input, output, function (err) {
-        proceed();
+function help() {
+    opts = {encoding: 'utf8'};
+    fs.readFile(path.join(__dirname, 'help'), opts, function (err, data) {
+        if (err) {
+            npmlog.error(null, err.message);
+            process.exit(Sysexits.IOERR);
+        }
+        process.stderr.write(data);
     });
 }
 
-function processInput(input, output, cb) {
+function version() {
+    var pack = require(path.join(__dirname, '../package.json'));
+    console.log(pack.version);
+}
+
+function run(opts, files) {
+    var output = process.stdout;
+    var errored = false;
+    if (typeof opts.output !== 'undefined') {
+        output = fs.createWriteStream(opts.output, {encoding: 'utf8'});
+    }
+    output.on('error', function (err) {
+        npmlog.error('output', err.message);
+        process.exit(Sysexits.IOERR);
+    });
+    process.stdin.setEncoding('utf8');
+    if (files.length === 0) files = ['-'];
     var m4 = new M4();
     m4.on('error', function (err) {
         npmlog.error(null, err.message);
-        errored = true;
     });
     m4.on('warning', function (err) {
         npmlog.warn(null, err.message);
     });
-    input.pipe(m4).pipe(output, {end: false});
-    m4.on('end', function (err) {
-        cb(err);
-    });
+    m4.pipe(output, {end: false});
+    new FileProcessor(files, m4, end.bind(null, m4, output));
 }
+
+util.inherits(FileProcessor, EventEmitter);
+
+function FileProcessor(files, output, cb) {
+    EventEmitter.call(this);
+    this._files = files;
+    this._output = output;
+    this._errors = [];
+    this._cb = cb;
+    this._processNext(0);
+}
+
+FileProcessor.prototype._processNext = function (ix) {
+    var self = this;
+    if (ix >= this._files.length) {
+        return process.nextTick(function () {
+            return self._cb(null, self._errors);
+        });
+    }
+    var input = this._openInput(this._files[ix]);
+    input.pipe(this._output, {end: false});
+    input.on('error', function onError(err) {
+        npmlog.error('input', err.message);
+        self._errors.push(err);
+        input.unpipe(self._output);
+        self._processNext(ix + 1);
+    });
+    this._output.on('error', function onOutputError(err) {
+        input.unpipe(self._output);
+        return self._cb(err);
+    });
+    input.on('end', function () {
+        return self._processNext(ix + 1);
+    });
+};
+
+FileProcessor.prototype._openInput = function (path) {
+    if (path === '-') return process.stdin;
+    return fs.createReadStream(path, {encoding: 'utf8'});
+};
+
+function end(m4, output, err, errors) {
+    m4.end();
+    if (output !== process.stdout) {
+        output.end();
+    }
+    if (err || errors.length > 0) process.exit(1);
+}
+
+main();
