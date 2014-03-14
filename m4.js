@@ -25,18 +25,6 @@ function error() {
     return err;
 }
 
-function makeMacro(fn, inert) {
-    if (typeof inert === 'undefined') inert = false;
-    return function macro() {
-        var args = Array.prototype.slice.call(arguments);
-        var self = args.shift();
-        if (inert && args.length === 0) return '`' + self + '\'';
-        var res = fn.apply(null, args);
-        if (typeof res === 'undefined') return '';
-        return res + '';
-    };
-}
-
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
     this._opts = {};
@@ -52,12 +40,31 @@ function M4(opts) {
     this._tokenizer = new Tokenizer();
     this._err = null;
     this._dnlMode = false;
-    this.define('define', makeMacro(this.define.bind(this), true));
-    this.define('divert', makeMacro(this.divert.bind(this)));
-    this.define('undivert', makeMacro(this.undivert.bind(this)));
-    this.define('divnum', makeMacro(this.divnum.bind(this)));
-    this.define('dnl', makeMacro(this.dnl.bind(this)));
+    this._defineMacro('define', this.define.bind(this), true);
+    this._defineMacro('divert', this.divert.bind(this));
+    this._defineMacro('undivert', this.undivert.bind(this), false, true);
+    this._defineMacro('divnum', this.divnum.bind(this));
+    this._defineMacro('dnl', this.dnl.bind(this));
 }
+
+M4.prototype._defineMacro = function (name, fn, inert, dynArgs) {
+    this.define(name, this._makeMacro(fn, inert, dynArgs));
+};
+
+M4.prototype._makeMacro = function (fn, inert, dynArgs) {
+    if (typeof inert === 'undefined') inert = false;
+    if (typeof dynArgs === 'undefined') dynArgs = false;
+    return (function macro() {
+        var args = Array.prototype.slice.call(arguments);
+        var self = args.shift();
+        if (inert && args.length === 0) return '`' + self + '\'';
+        if (!dynArgs && args.length > fn.length)
+            this.emit('warning', error('WTOOMANYARGS', self));
+        var res = fn.apply(null, args);
+        if (typeof res === 'undefined') return '';
+        return res + '';
+    }).bind(this);
+};
 
 M4.prototype._transform = function (chunk, encoding, cb) {
     if (this._err !== null) return cb();
@@ -189,9 +196,7 @@ M4.prototype.undivert = function () {
     }
 };
 
-M4.prototype.divnum = function (dummy) {
-    if (typeof dummy !== 'undefined')
-        this.emit('warning', error('WTOOMANYARGS', 'divnum'));
+M4.prototype.divnum = function () {
     return this._divertIx;
 };
 
