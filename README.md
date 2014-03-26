@@ -14,9 +14,18 @@ provided, usable as a drop-in replacement for a native version
 
 ## Example usage
 
+### From Command-line
+
+```bash
+echo "define(\`beep', \`boop')dnl\nbeep\n" | m4
+#=>  boop
 ```
-$ node example.js
-boop
+
+### From JavaScript
+
+```bash
+node example.js
+#=>  boop
 ```
 
 ```js
