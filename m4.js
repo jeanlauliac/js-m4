@@ -4,26 +4,12 @@ var Transform = require('stream').Transform;
 var util = require('util');
 var Tokenizer = require('./lib/tokenizer');
 var expand = require('./lib/expand');
+var M4Error = require('./lib/m4-error');
+var Code = M4Error.Code;
 var util = require('util');
 
 module.exports = M4;
 util.inherits(M4, Transform);
-
-var ErrDescs = {
-    EINVRET: 'macro function `%s\' did not return a string',
-    ENESTLIMIT: 'too much macro nesting (max. %s)',
-    WTXTUNDIV: 'non-number `%s\' in undivert arguments (forgot to enable extensions?)',
-    WTOOMANYARGS: 'excess arguments to builtin `%s\' ignored'
-};
-
-function error() {
-    var args = Array.prototype.slice.call(arguments);
-    var code = args.shift();
-    var err = new Error(util.format.apply(null, [ErrDescs[code]].concat(args)));
-    err.code = code;
-    err.args = args;
-    return err;
-}
 
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
@@ -60,10 +46,12 @@ M4.prototype._makeMacro = function (fn, inert, dynArgs) {
     if (typeof dynArgs === 'undefined') dynArgs = false;
     return (function macro() {
         var args = Array.prototype.slice.call(arguments);
-        var self = args.shift();
-        if (inert && args.length === 0) return '`' + self + '\'';
-        if (!dynArgs && args.length > fn.length)
-            this.emit('warning', error('WTOOMANYARGS', self));
+        var macroName = args.shift();
+        if (inert && args.length === 0) return '`' + macroName + '\'';
+        if (!dynArgs && args.length > fn.length) {
+            var err = new M4Error(Code.W_TOO_MANY_ARGS, macroName);
+            this.emit('warning', err);
+        }
         var res = fn.apply(null, args);
         if (typeof res === 'undefined') return '';
         return res + '';
@@ -105,7 +93,7 @@ M4.prototype._flush = function (cb) {
 M4.prototype._startMacroArgs = function () {
     if (this._opts.nestingLimit > 0 &&
         this._macroStack.length === this._opts.nestingLimit) {
-        throw error('ENESTLIMIT', this._opts.nestingLimit);
+        throw new M4Error(Code.E_NEST_LIMIT, this._opts.nestingLimit);
     }
     this._tokenizer.read();
     this._pending.args.push('');
@@ -116,7 +104,7 @@ M4.prototype._startMacroArgs = function () {
 M4.prototype._callMacro = function (fn, args) {
     var result = fn.apply(null, args);
     if (typeof result !== 'string')
-        throw error('EINVRET', args[0]);
+        throw new M4Error(Code.E_INV_RET, args[0]);
     return result;
 };
 
@@ -193,7 +181,7 @@ M4.prototype.undivert = function () {
             if (this._opts.extensions) {
                 throw new Error('not implemented');
             } else {
-                this.emit('warning', error('WTXTUNDIV', arg));
+                this.emit('warning', new M4Error(Code.W_TXT_UNDIV, arg));
             }
         }
     }
