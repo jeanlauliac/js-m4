@@ -38,6 +38,10 @@ function M4(opts) {
     this._divertIx = 0;
     this._diversions = [];
     this._tokenizer = new Tokenizer();
+    this._tokenizer.on('error', (function (err) {
+        this._err = err;
+        this.emit('error', err);
+    }).bind(this));
     this._err = null;
     this._dnlMode = false;
     this._defineMacro('define', this.define.bind(this), true);
@@ -83,7 +87,6 @@ M4.prototype._transform = function (chunk, encoding, cb) {
         }
     } catch (err) {
         this._err = err;
-        //this.push(null);
         return cb(err);
     }
     return cb();

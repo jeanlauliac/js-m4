@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+'use strict';
 
 var M4 = require('..');
 var nopt = require('nopt');
@@ -6,8 +7,7 @@ var path = require('path');
 var fs = require('fs');
 var npmlog = require('npmlog');
 var Sysexits = require('sysexits');
-var EventEmitter = require('events').EventEmitter;
-var util = require('util');
+var FileBatch = require('./file-batch.js');
 
 var knownOpts = {
     'help': Boolean,
@@ -47,7 +47,7 @@ var shortHands = {
 };
 
 function main() {
-    var opts = nopt(knownOpts);
+    var opts = nopt(knownOpts, shortHands);
     var files = opts.argv.remain;
     if (opts.help) return help();
     if (opts.version) return version();
@@ -57,7 +57,7 @@ function main() {
 }
 
 function help() {
-    opts = {encoding: 'utf8'};
+    var opts = {encoding: 'utf8'};
     fs.readFile(path.join(__dirname, 'help'), opts, function (err, data) {
         if (err) {
             npmlog.error(null, err.message);
@@ -78,69 +78,35 @@ function run(opts, files) {
     if (typeof opts.output !== 'undefined') {
         output = fs.createWriteStream(opts.output, {encoding: 'utf8'});
     }
-    output.on('error', function (err) {
-        npmlog.error('output', err.message);
-        process.exit(Sysexits.IOERR);
-    });
     process.stdin.setEncoding('utf8');
     if (files.length === 0) files = ['-'];
     var m4 = new M4();
-    m4.on('error', function (err) {
-        npmlog.error(null, err.message);
-    });
+    var batch = new FileBatch(files, m4, end.bind(null, m4, output));
     m4.on('warning', function (err) {
         npmlog.warn(null, err.message);
     });
+    batch.on('error', function (err) {
+        npmlog.error(err.source === 'output' ? 'm4' : 'input',
+                     err.inner.message);
+        errored = true;
+        if (err.source === 'output') {
+
+        }
+    });
     m4.pipe(output, {end: false});
-    new FileProcessor(files, m4, end.bind(null, m4, output));
+    batch.on('done', function () { end(m4, output, errored); });
+    batch.execute();
+    output.on('error', function (err) {
+        npmlog.error('output', err.message);
+        m4.unpipe(output);
+        batch.abort();
+    });
 }
 
-util.inherits(FileProcessor, EventEmitter);
-
-function FileProcessor(files, output, cb) {
-    EventEmitter.call(this);
-    this._files = files;
-    this._output = output;
-    this._errors = [];
-    this._cb = cb;
-    this._processNext(0);
-}
-
-FileProcessor.prototype._processNext = function (ix) {
-    var self = this;
-    if (ix >= this._files.length) {
-        return process.nextTick(function () {
-            return self._cb(null, self._errors);
-        });
-    }
-    var input = this._openInput(this._files[ix]);
-    input.pipe(this._output, {end: false});
-    input.on('error', function onError(err) {
-        npmlog.error('input', err.message);
-        self._errors.push(err);
-        input.unpipe(self._output);
-        self._processNext(ix + 1);
-    });
-    this._output.on('error', function onOutputError(err) {
-        input.unpipe(self._output);
-        return self._cb(err);
-    });
-    input.on('end', function () {
-        return self._processNext(ix + 1);
-    });
-};
-
-FileProcessor.prototype._openInput = function (path) {
-    if (path === '-') return process.stdin;
-    return fs.createReadStream(path, {encoding: 'utf8'});
-};
-
-function end(m4, output, err, errors) {
-    m4.end();
-    if (output !== process.stdout) {
-        output.end();
-    }
-    if (err || errors.length > 0) process.exit(1);
+function end(m4, output, errored) {
+    if (!errored) m4.end();
+    if (output !== process.stdout) output.end();
+    if (errored) process.exit(1);
 }
 
 main();

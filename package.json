@@ -26,8 +26,9 @@
     "bin": "./bin"
   },
   "main": "./m4",
-  "bin": "./m4",
+  "bin": "./bin/m4.js",
   "files": [
+    "m4.js",
     "lib/",
     "bin/",
     "LICENSE"
