@@ -4,17 +4,24 @@
 
 **m4** is a pure Javascript implementation of an
 [m4](http://mbreen.com/m4.html) macro language processor. You can use it
-with Node.js or in the browser, via browserify. A command-line version is
-provided, usable as a drop-in replacement for a native version
-(such as [GNU M4](http://www.gnu.org/software/m4/)).
+with Node.js or in the browser, via browserify. It is exposed as a
+transformation [Stream](http://nodejs.org/api/stream.html). As such, you can
+easily pipe from any input and to any output.
+
+A command-line version is also provided, usable as a drop-in replacement for a
+native version (such as [GNU M4](http://www.gnu.org/software/m4/)).
 
 ## Installation
 
     npm install m4
 
+If installed locally, the binary is available as `node_module/.bin/m4`. You
+can directly refer to `m4` in
+[npm-scripts](https://www.npmjs.org/doc/misc/npm-scripts.html#path).
+
 ## Example usage
 
-### From Command-line
+### From a shell
 
 ```bash
 echo "define(\`beep', \`boop')dnl\nbeep\n" | m4
@@ -22,11 +29,6 @@ echo "define(\`beep', \`boop')dnl\nbeep\n" | m4
 ```
 
 ### From JavaScript
-
-```bash
-node example.js
-#=>  boop
-```
 
 ```js
 // example.js
@@ -39,6 +41,13 @@ input.pipe(M4()).pipe(process.stdout);
 
 input.write("define(`beep', `boop')dnl\nbeep\n");
 input.end();
+```
+
+Then, in a shell:
+
+```bash
+node example.js
+#=>  boop
 ```
 
 ## API
@@ -83,7 +92,7 @@ stored in an internal buffer — a "diversion" — instead.
 
 #### m4.undivert([diversions...])
 
-   * `diversions` *Number* Diversion indices.
+  * `diversions` *Number* Diversion indices.
 
 Output the content of the specified diversions. They are emptied. If no
 diversion is specified, all of them are undiverted, in numerical order.
@@ -92,3 +101,10 @@ diversion is specified, all of them are undiverted, in numerical order.
 
 Put the stream into a special mode where all the tokens are ignored until the
 next newline.
+
+#### m4.changeQuote([left], [right])
+
+  * `left` *String* Characters delimiting the beginning of a string.
+  * `right` *String* Characters delimiting the end of a string.
+
+Delimiters can be of any length.
