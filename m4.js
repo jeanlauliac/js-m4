@@ -25,10 +25,6 @@ function M4(opts) {
     this._diversions = [];
     this._skipWhitespace = false;
     this._tokenizer = new Tokenizer();
-    this._tokenizer.on('error', (function (err) {
-        this._err = err;
-        this.emit('error', err);
-    }).bind(this));
     this._err = null;
     this._dnlMode = false;
     this._registerBuiltins();
