@@ -24,6 +24,7 @@ function M4(opts) {
     this._divertIx = 0;
     this._diversions = [];
     this._skipWhitespace = false;
+    this._parens = 0;
     this._tokenizer = new Tokenizer();
     this._err = null;
     this._dnlMode = false;
@@ -102,6 +103,7 @@ M4.prototype._startMacroArgs = function () {
     this._macroStack.push(this._pending);
     this._pending = null;
     this._skipWhitespace = true;
+    this._parens = 0;
 };
 
 M4.prototype._callMacro = function (fn, args) {
@@ -135,14 +137,19 @@ M4.prototype._processToken = function (token) {
         return this._pushOutput(token.value);
     var macro = this._macroStack[this._macroStack.length - 1];
     if (token.type === Tokenizer.Type.LITERAL) {
-        if (token.value === ',') {
+        if (token.value === ')') {
+            if (this._parens === 0) {
+                macro = this._macroStack.pop();
+                var result = this._callMacro(macro.fn, macro.args);
+                this._tokenizer.unshift(result);
+                return;
+            }
+            --this._parens;
+        } else if (token.value === '(') {
+            ++this._parens;
+        } else if (token.value === ',' && this._parens === 0) {
             macro.args.push('');
             this._skipWhitespace = true;
-            return;
-        } else if (token.value === ')') {
-            macro = this._macroStack.pop();
-            var result = this._callMacro(macro.fn, macro.args);
-            this._tokenizer.unshift(result);
             return;
         }
     }
