@@ -1,0 +1,12 @@
+# http://www.gnu.org/software/m4/manual/m4.html#Macro-Arguments
+
+unquoted leading space lost
+ quoted leading space kept
+ unquoted space kept after expansion
+
+whitespace from expansion kept
+unquoted trailing whitespace kept
+
+
+
+1
