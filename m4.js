@@ -30,12 +30,17 @@ function M4(opts) {
     }).bind(this));
     this._err = null;
     this._dnlMode = false;
+    this._registerBuiltins();
+}
+
+M4.prototype._registerBuiltins = function () {
     this._defineMacro('define', this.define.bind(this), true);
     this._defineMacro('divert', this.divert.bind(this));
     this._defineMacro('undivert', this.undivert.bind(this), false, true);
     this._defineMacro('divnum', this.divnum.bind(this));
     this._defineMacro('dnl', this.dnl.bind(this));
-}
+    this._defineMacro('changequote', this.changeQuote.bind(this));
+};
 
 M4.prototype._defineMacro = function (name, fn, inert, dynArgs) {
     this.define(name, this._makeMacro(fn, inert, dynArgs));
@@ -206,4 +211,14 @@ M4.prototype._undivert = function (i) {
 
 M4.prototype.dnl = function () {
     this._dnlMode = true;
+};
+
+M4.prototype.changeQuote = function (lhs, rhs) {
+    if (typeof lhs === 'undefined') {
+        lhs = '`';
+        rhs = '\'';
+    } else if (typeof rhs === 'undefined') {
+        rhs = '\'';
+    }
+    this._tokenizer.changeQuote(lhs, rhs);
 };

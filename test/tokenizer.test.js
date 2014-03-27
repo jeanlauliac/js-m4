@@ -7,7 +7,7 @@ var test = function (name, fn) {
     testRaw('[tokenizer] ' + name, fn);
 };
 
-test('id token', function (t) {
+test('name token', function (t) {
     t.plan(1);
     var s = new Tokenizer();
     s.push('foobar');
@@ -15,7 +15,7 @@ test('id token', function (t) {
     t.same(s.read(), {type: Tokenizer.Type.NAME, value: 'foobar'});
 });
 
-test('id token, multiple', function (t) {
+test('name token, multiple', function (t) {
     t.plan(5);
     var s = new Tokenizer();
     s.push('foobar glo');
@@ -27,15 +27,27 @@ test('id token, multiple', function (t) {
     t.equal(s.read(), null);
 });
 
-test('quoted token', function (t) {
+test('string token', function (t) {
     t.plan(1);
     var s = new Tokenizer();
-    s.push('`foobar\'');
+    s.push('`foo`b\'ar\'');
     s.end();
-    t.same(s.read(), {type: Tokenizer.Type.STRING, value: 'foobar'});
+    t.same(s.read(), {type: Tokenizer.Type.STRING, value: 'foo`b\'ar'});
 });
 
-test('string token', function (t) {
+test('string token w/ custom quote', function (t) {
+    t.plan(4);
+    var s = new Tokenizer();
+    s.changeQuote('<[', ']]>');
+    s.push('the<<[foo<[b]]>ar]]>cake');
+    s.end();
+    t.same(s.read(), {type: Tokenizer.Type.NAME, value: 'the'});
+    t.same(s.read(), {type: Tokenizer.Type.LITERAL, value: '<'});
+    t.same(s.read(), {type: Tokenizer.Type.STRING, value: 'foo<[b]]>ar'});
+    t.same(s.read(), {type: Tokenizer.Type.NAME, value: 'cake'});
+});
+
+test('literal token', function (t) {
     t.plan(2);
     var s = new Tokenizer();
     s.push('汉语');
