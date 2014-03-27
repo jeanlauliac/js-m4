@@ -134,6 +134,10 @@ M4.prototype._processToken = function (token) {
         return this._pushOutput(token.value);
     var macro = this._macroStack[this._macroStack.length - 1];
     if (token.type === Tokenizer.Type.LITERAL) {
+        if (macro.args[macro.args.length - 1] === '' &&
+            /\s/.test(token.value)) {
+            return;
+        }
         if (token.value === ',') {
             macro.args.push('');
             return;

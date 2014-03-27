@@ -32,11 +32,12 @@ var opt = {encoding: 'utf8', autoClose: true};
 fs.readdir(smPath, function (err, files) {
     if (err) throw err;
     files.forEach(function (file) {
-        if (path.extname(file) === '.m4') return;
+        if (path.extname(file) !== '.m4') return;
+        file = path.basename(file, '.m4');
         test('[m4] ' + file, function (t) {
-            file = path.join(smPath, file);
-            var input = fs.createReadStream(file + '.m4', opt);
-            var ref = fs.createReadStream(file, opt);
+            var filePath = path.join(smPath, file);
+            var input = fs.createReadStream(filePath + '.m4', opt);
+            var ref = fs.createReadStream(filePath, opt);
             var output = input.pipe(new M4());
             streamEqual(t, output, ref, function () {
                 t.end();

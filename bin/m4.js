@@ -89,9 +89,6 @@ function run(opts, files) {
         npmlog.error(err.source === 'output' ? 'm4' : 'input',
                      err.inner.message);
         errored = true;
-        if (err.source === 'output') {
-
-        }
     });
     m4.pipe(output, {end: false});
     batch.on('done', function () { end(m4, output, errored); });

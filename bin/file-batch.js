@@ -39,7 +39,7 @@ FileBatch.prototype._processNext = function (ix) {
     });
     this._output.on('error', function onOutputError(err) {
         input.unpipe(self._output);
-        input.close();
+        if (input !== process.stdin) input.close();
         self.emit('error', new BatchError('output', err));
         self.emit('done');
     });
