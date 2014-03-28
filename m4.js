@@ -25,6 +25,8 @@ function M4(opts) {
     this._diversions = [];
     this._skipWhitespace = false;
     this._tokenizer = new Tokenizer();
+    this._expandOpts = {ext: true, leftQuote: this._tokenizer._leftQuote,
+                        rightQuote: this._tokenizer._rightQuote};
     this._err = null;
     this._dnlMode = false;
     this._registerBuiltins();
@@ -174,7 +176,7 @@ M4.prototype.define = function (name, fn) {
     if (typeof name !== 'string' || name.length === 0) return '';
     if (typeof fn === 'undefined') fn = '';
     if (typeof fn !== 'function')
-        fn = expand.bind(null, fn);
+        fn = expand.bind(null, this._expandOpts, fn);
     this._macros[name] = fn;
 };
 
@@ -237,4 +239,6 @@ M4.prototype.changeQuote = function (lhs, rhs) {
         rhs = '\'';
     }
     this._tokenizer.changeQuote(lhs, rhs);
+    this._expandOpts.leftQuote = lhs;
+    this._expandOpts.rightQuote = rhs;
 };
