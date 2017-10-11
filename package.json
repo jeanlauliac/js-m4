@@ -44,8 +44,7 @@
     "faucet": "0.0.1"
   },
   "engines": {
-    "node": ">=0.10",
-    "npm": "1"
+    "node": ">=0.10"
   },
   "scripts": {
     "test": "faucet"
