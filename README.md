@@ -37,7 +37,7 @@ echo "define(\`beep', \`boop')dnl\nbeep\n" | m4
 var M4 = require('m4');
 
 var input = new M4();
-input.pipe(M4()).pipe(process.stdout);
+input.pipe(new M4()).pipe(process.stdout);
 
 input.write("define(`beep', `boop')dnl\nbeep\n");
 input.end();
