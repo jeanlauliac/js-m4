@@ -8,9 +8,20 @@ var M4Error = require('./lib/m4-error');
 var Code = M4Error.Code;
 var util = require('util');
 
+/**
+ * @module {M4} M4
+ * @type {M4}
+ */
 module.exports = M4;
 util.inherits(M4, Transform);
 
+/**
+ * @class
+ * @param opts
+ * @augments stream.Transform
+ * @alias module:M4
+ * @private
+ */
 function M4(opts) {
     Transform.call(this, {decodeStrings: false, encoding: 'utf8'});
     this._opts = {};
@@ -32,6 +43,10 @@ function M4(opts) {
     this._registerBuiltins();
 }
 
+/**
+ *
+ * @private
+ */
 M4.prototype._registerBuiltins = function () {
     this._defineMacro('define', this.define.bind(this), true);
     this._defineMacro('divert', this.divert.bind(this));
@@ -41,10 +56,26 @@ M4.prototype._registerBuiltins = function () {
     this._defineMacro('changequote', this.changeQuote.bind(this));
 };
 
+/**
+ *
+ * @param name
+ * @param fn
+ * @param inert
+ * @param dynArgs
+ * @private
+ */
 M4.prototype._defineMacro = function (name, fn, inert, dynArgs) {
     this.define(name, this._makeMacro(fn, inert, dynArgs));
 };
 
+/**
+ *
+ * @param fn
+ * @param inert
+ * @param dynArgs
+ * @returns {function(this:M4)}
+ * @private
+ */
 M4.prototype._makeMacro = function (fn, inert, dynArgs) {
     if (typeof inert === 'undefined') inert = false;
     if (typeof dynArgs === 'undefined') dynArgs = false;
@@ -62,6 +93,14 @@ M4.prototype._makeMacro = function (fn, inert, dynArgs) {
     }).bind(this);
 };
 
+/**
+ *
+ * @param chunk
+ * @param encoding
+ * @param cb
+ * @returns {*}
+ * @private
+ */
 M4.prototype._transform = function (chunk, encoding, cb) {
     if (this._err !== null) return cb();
     try {
@@ -84,6 +123,11 @@ M4.prototype._transform = function (chunk, encoding, cb) {
     return cb();
 };
 
+/**
+ *
+ * @param cb
+ * @private
+ */
 M4.prototype._flush = function (cb) {
     this._tokenizer.end();
     this._transform('', null, (function (err) {
@@ -94,6 +138,10 @@ M4.prototype._flush = function (cb) {
     }).bind(this));
 };
 
+/**
+ *
+ * @private
+ */
 M4.prototype._startMacroArgs = function () {
     if (this._opts.nestingLimit > 0 &&
         this._macroStack.length === this._opts.nestingLimit) {
@@ -106,6 +154,13 @@ M4.prototype._startMacroArgs = function () {
     this._skipWhitespace = true;
 };
 
+/**
+ *
+ * @param fn
+ * @param args
+ * @returns {*}
+ * @private
+ */
 M4.prototype._callMacro = function (fn, args) {
     var result = fn.apply(null, args);
     if (typeof result !== 'string')
@@ -113,6 +168,10 @@ M4.prototype._callMacro = function (fn, args) {
     return result;
 };
 
+/**
+ *
+ * @private
+ */
 M4.prototype._processPendingMacro = function () {
     if (this._pending === null) return;
     if (this._tokenizer.peekChar() === null &&
@@ -124,6 +183,12 @@ M4.prototype._processPendingMacro = function () {
     this._pending = null;
 };
 
+/**
+ *
+ * @param token
+ * @returns {Tokenizer|Number|void}
+ * @private
+ */
 M4.prototype._processToken = function (token) {
     if (this._skipWhitespace && token.type === Tokenizer.Type.LITERAL &&
         /\s/.test(token.value)) return;
@@ -142,10 +207,21 @@ M4.prototype._processToken = function (token) {
     macro.args[macro.args.length - 1] += token.value;
 };
 
+/**
+ *
+ * @private
+ */
 M4.prototype._makeMacroCall = function (name) {
     return {fn: this._macros[name], args: [name], parens: 0};
 };
 
+/**
+ *
+ * @param macro
+ * @param token
+ * @returns {boolean}
+ * @private
+ */
 M4.prototype._processLiteralInMacro = function (macro, token) {
     if (token.value === ')') {
         if (macro.parens === 0) {
@@ -165,6 +241,12 @@ M4.prototype._processLiteralInMacro = function (macro, token) {
     return false;
 };
 
+/**
+ *
+ * @param output
+ * @returns {Tokenizer|Number|void}
+ * @private
+ */
 M4.prototype._pushOutput = function (output) {
     if (this._divertIx < 0) return;
     if (this._divertIx === 0)
@@ -180,6 +262,10 @@ M4.prototype.define = function (name, fn) {
     this._macros[name] = fn;
 };
 
+/**
+ *
+ * @param {number} [ix=0] index - Diversion index.
+ */
 M4.prototype.divert = function (ix) {
     if (ix === null || typeof ix === 'undefined') ix = 0;
     this._divertIx = +ix;
@@ -210,16 +296,29 @@ M4.prototype.undivert = function () {
     }
 };
 
+/**
+ *
+ * @returns {number|*}
+ * @private
+ */
 M4.prototype.divnum = function () {
     return this._divertIx;
 };
 
+/**
+ *
+ * @private
+ */
 M4.prototype._undivertAll = function () {
     for (var i = 1; i <= this._diversions.length; ++i) {
         this._undivert(i);
     }
 };
 
+/**
+ * @param {number} i
+ * @private
+ */
 M4.prototype._undivert = function (i) {
     if (i <= 0 || this._divertIx === i) return;
     if (typeof this._diversions[i - 1] === 'undefined') return;
@@ -227,10 +326,19 @@ M4.prototype._undivert = function (i) {
     delete this._diversions[i - 1];
 };
 
+/**
+ * Enable Dnl mode
+ * Put the stream into a special mode where all the tokens are ignored until the
+ * next newline.
+ */
 M4.prototype.dnl = function () {
     this._dnlMode = true;
 };
 
+/**
+ * @param {string} [lhs] - Characters delimiting the beginning of a string.
+ * @param {string} [rhs] - Characters delimiting the end of a string.
+ */
 M4.prototype.changeQuote = function (lhs, rhs) {
     if (typeof lhs === 'undefined') {
         lhs = '`';
